@@ -6,6 +6,8 @@
   "permissions": {
     "allow": [
       "Bash(python3 scripts/edit.py:*)",
+      "Bash(python scripts/edit.py:*)",
+      "Bash(py scripts/edit.py:*)",
       "Bash(ffprobe:*)",
       "Bash(ffmpeg:*)",
       "Bash(npx remotion:*)",

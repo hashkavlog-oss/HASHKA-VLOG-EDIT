@@ -2,9 +2,10 @@
 
 Mongolian podcast (politics, society, psychology) → edited episodes + regular 9:16 reels cut from them, with animated Mongolian captions.
 User writes Mongolian (often Latin transliteration). Reply in Mongolian Cyrillic, short.
+User is on Windows 11: use `python` (not `python3`) and give PowerShell commands, never brew/bash-only.
 
 ## Tools (all via one CLI)
-`python3 scripts/edit.py <cmd> -h` — cmds: info, frame, enhance, cutsilence, transcribe, srt2json, clip, render, reel, burn, podcast.
+`python scripts/edit.py <cmd> -h` (python3 on Mac/Linux) — cmds: info, frame, enhance, cutsilence, transcribe, srt2json, clip, render, reel, burn, podcast.
 - Media in `input/`, intermediates in `work/<stem>/`, results in `output/`.
 - Remotion project: `remotion/` (comps `Reel` 1080x1920, `Wide` 1920x1080, component `src/Edit.tsx`). Props come from edit.py; don't hand-edit `public/jobs/`.
 - Fonts are local (`remotion/public/fonts`, Montserrat incl. cyrillic-ext for Ө/Ү). Never switch to Google Fonts CDN.

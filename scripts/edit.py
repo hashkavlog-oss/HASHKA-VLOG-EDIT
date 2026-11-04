@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from captions import (apply_fixes, compact_transcript, load_fixes,  # noqa: E402
                       slice_captions, srt_to_captions, words_to_srt)
 from common import (OUTPUT, REMOTION, ROOT, ffmpeg, load_json, probe,  # noqa: E402
-                    save_json, stem_dir)
+                    save_json, stem_dir, tool)
 
 VIDEO_OUT = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p",
              "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart"]
@@ -78,7 +78,7 @@ def cmd_enhance(a):
 def detect_silence(src: Path, noise: str, min_dur: float) -> list[tuple[float, float]]:
     p = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(src), "-af",
                         f"silencedetect=noise={noise}:d={min_dur}", "-f", "null", "-"],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
     starts = [float(x) for x in re.findall(r"silence_start: ([\d.]+)", p.stderr)]
     ends = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", p.stderr)]
     return list(zip(starts, ends + [None] * (len(starts) - len(ends))))
@@ -124,7 +124,6 @@ def cmd_cutsilence(a):
 
 # ---------------------------------------------------------------- transcription
 def transcribe(src: Path, model_name: str, prompt: str | None) -> list[dict]:
-    from faster_whisper import WhisperModel
     import numpy as np
     # Decode with ffmpeg ourselves (avoids PyAV version issues): 16 kHz mono float32
     raw = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-i", str(src), "-vn",
@@ -136,6 +135,16 @@ def transcribe(src: Path, model_name: str, prompt: str | None) -> list[dict]:
         device = "cuda" if ctranslate2.get_cuda_device_count() > 0 else "cpu"
     except Exception:
         device = "cpu"
+    if device == "cuda":
+        try:
+            return _transcribe(audio, model_name, prompt, "cuda")
+        except Exception as e:  # e.g. cublas64_12.dll missing on Windows
+            print(f"GPU ажиллахгүй байна ({str(e)[:80]}), CPU руу шилжлээ.")
+    return _transcribe(audio, model_name, prompt, "cpu")
+
+
+def _transcribe(audio, model_name: str, prompt: str | None, device: str) -> list[dict]:
+    from faster_whisper import WhisperModel
     compute = "float16" if device == "cuda" else "int8"
     print(f"Whisper '{model_name}' ({device}/{compute}) ачаалж байна…", flush=True)
     model = WhisperModel(model_name, device=device, compute_type=compute)
@@ -240,9 +249,9 @@ def remotion_render(video: Path, caps: list[dict], out: Path, comp: str, title: 
     props_file = pub / "props.json"
     save_json(props_file, props)
     if not (REMOTION / "node_modules").exists():
-        subprocess.run(["npm", "i"], cwd=REMOTION, check=True)
+        subprocess.run([tool("npm"), "i"], cwd=REMOTION, check=True)
     try:
-        subprocess.run(["npx", "remotion", "render", "src/index.ts", comp, str(out.resolve()),
+        subprocess.run([tool("npx"), "remotion", "render", "src/index.ts", comp, str(out.resolve()),
                         f"--props={props_file}", "--crf=18", "--log=warn"],
                        cwd=REMOTION, check=True)
     finally:
@@ -307,7 +316,9 @@ def cmd_burn(a):
     tmp = stem_dir(src) / "burn.srt"
     shutil.copy(srt, tmp)
     out = out_path(a.output, src, "burned")
-    ffmpeg(["-i", src, "-vf", f"subtitles={tmp}:force_style='{style}'", *VIDEO_OUT, out])
+    # run inside work dir with a relative name: Windows "C:\\" paths break filter syntax
+    ffmpeg(["-i", src.resolve(), "-vf", f"subtitles=burn.srt:force_style='{style}'",
+            *VIDEO_OUT, out.resolve()], cwd=tmp.parent)
     print("✔", out)
 
 

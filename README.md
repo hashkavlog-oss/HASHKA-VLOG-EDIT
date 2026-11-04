@@ -11,25 +11,53 @@
 - ✨ **TikTok маягийн субтитр**: ярьж буй үг шараар тодорно, Ө/Ү зөв фонт, hook гарчиг, progress bar, @брэнд
 - 🤖 **Claude reel сонгоно**: транскриптээс хамгийн хүчтэй 30–60 сек хэсгийг олж, гарчиг санал болгоно
 
-## Суулгах (нэг удаа)
+## Суулгах — Windows 11 (нэг удаа)
 
-Mac:
-```bash
-brew install ffmpeg node python
+> ⚠️ Доорх командуудыг **PowerShell**-д бичнэ. `/reel`, `/podcast` гэх мэт `/`-ээр эхэлсэн командуудыг харин **Claude Code дотор** бичнэ (PowerShell-д биш).
+
+**1. Git суулгах** (PowerShell):
+```powershell
+winget install -e --id Git.Git
 ```
-Дараа нь:
-```bash
+PowerShell-ээ хаагаад дахин нээнэ.
+
+**2. Репог татах:**
+```powershell
+cd $HOME\Documents
+```
+```powershell
 git clone https://github.com/hashkavlog-oss/HASHKA-VLOG-EDIT.git
 ```
-```bash
-cd HASHKA-VLOG-EDIT && ./setup.sh
+```powershell
+cd HASHKA-VLOG-EDIT
 ```
 
-> Видео файлууд том учраас Claude Code-ийг **өөрийн компьютер дээрээ** (Terminal эсвэл Desktop app) энэ хавтсанд ажиллуулах нь хамгийн тохиромжтой.
+**3. Бүгдийг суулгах** (ffmpeg, Node.js, Python, сангууд):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+"PowerShell-ээ хаагаад дахин нээ" гэвэл тэгээд, `cd $HOME\Documents\HASHKA-VLOG-EDIT` хийж, 3-р алхмыг дахин ажиллуулна.
+
+**4. Claude Code эхлүүлэх** (энэ хавтсан дотроо):
+```powershell
+claude
+```
+Claude Code суугаагүй бол эхлээд суулгана:
+```powershell
+irm https://claude.ai/install.ps1 | iex
+```
+Эсвэл **Claude Desktop app → Code** таб руу ороод энэ хавтсыг (`Documents\HASHKA-VLOG-EDIT`) сонгоно.
+
+<details><summary>Mac дээр бол</summary>
+
+```bash
+brew install ffmpeg node python && ./setup.sh
+```
+</details>
 
 ## Claude Code-д хэрхэн хэлэх вэ
 
-Видеогоо `input/` хавтсанд хийгээд Claude Code нээж:
+Видеогоо `Documents\HASHKA-VLOG-EDIT\input\` хавтсанд хуулаад, Claude Code дотор:
 
 | Бичих | Юу болох |
 |---|---|
@@ -39,16 +67,16 @@ cd HASHKA-VLOG-EDIT && ./setup.sh
 | `/fix-subs work/ep12` | Монгол субтитрийн алдааг засна |
 | "12:30–13:15 хэсгийг reel болго, гарчиг нь 'Стрессээ яаж тайлах вэ?'" | Шууд хийнэ |
 
-## Гараар ажиллуулах
+## Гараар ажиллуулах (PowerShell)
 
-```bash
-python3 scripts/edit.py podcast input/ep12.mp4
+```powershell
+python scripts/edit.py podcast input/ep12.mp4
 ```
-```bash
-python3 scripts/edit.py reel output/ep12_episode.mp4 --start 12:30 --end 13:15 --title "Стрессээ яаж тайлах вэ?" --layout split --x 0.25 --x2 0.75 --brand @hashka
+```powershell
+python scripts/edit.py reel output/ep12_episode.mp4 --start 12:30 --end 13:15 --title "Стрессээ яаж тайлах вэ?" --layout split --x 0.25 --x2 0.75 --brand @hashka
 ```
-```bash
-python3 scripts/edit.py -h
+```powershell
+python scripts/edit.py -h
 ```
 
 Бүх команд: `info`, `frame`, `enhance`, `cutsilence`, `transcribe`, `srt2json`, `clip`, `render`, `reel`, `burn`, `podcast`.
@@ -64,7 +92,7 @@ GPU байвал Whisper автоматаар GPU ашиглана. CPU дээр
 ## Загвар өөрчлөх
 - Өнгө: `--accent "#FF3B6B"`, байрлал: `--captionY 0.6`, ТОМ ҮСЭГ: `--upper`
 - Дизайн код: `remotion/src/components/` (Captions, HookTitle, Overlay)
-- Урьдчилан харах: `cd remotion && npm run dev`
+- Урьдчилан харах: `cd remotion; npm run dev`
 
 ## Бүтэц
 ```

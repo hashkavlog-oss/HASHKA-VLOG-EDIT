@@ -3,8 +3,24 @@ from __future__ import annotations
 
 import json
 import shlex
+import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+# Windows consoles/pipes default to cp1252 -> Cyrillic would crash prints
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
+IS_WIN = sys.platform == "win32"
+
+
+def tool(name: str) -> str:
+    """Resolve npx/npm to npx.cmd etc. on Windows."""
+    return shutil.which(name) or name
 
 ROOT = Path(__file__).resolve().parent.parent
 REMOTION = ROOT / "remotion"
@@ -12,16 +28,17 @@ WORK = ROOT / "work"
 OUTPUT = ROOT / "output"
 
 
-def run(cmd: list, quiet: bool = False) -> subprocess.CompletedProcess:
+def run(cmd: list, quiet: bool = False, cwd: Path | None = None) -> subprocess.CompletedProcess:
     cmd = [str(c) for c in cmd]
     if not quiet:
-        print("$", shlex.join(cmd)[:160] + (" …" if len(shlex.join(cmd)) > 160 else ""), flush=True)
-    return subprocess.run(cmd, check=True, text=True,
-                          capture_output=quiet)
+        line = shlex.join(cmd)
+        print("$", line[:160] + (" …" if len(line) > 160 else ""), flush=True)
+    return subprocess.run(cmd, check=True, text=True, encoding="utf-8", errors="replace",
+                          capture_output=quiet, cwd=cwd)
 
 
-def ffmpeg(args: list) -> None:
-    run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-nostats", *args])
+def ffmpeg(args: list, cwd: Path | None = None) -> None:
+    run(["ffmpeg", "-y", "-hide_banner", "-loglevel", "error", "-nostats", *args], cwd=cwd)
 
 
 def probe(path: Path) -> dict:

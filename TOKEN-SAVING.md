@@ -14,10 +14,10 @@ Claude Code-ийн зарцуулдаг токены дийлэнх нь **ор�
 
 ## 2. Нэг удаа тохируулах: `.claude/settings.json`
 
-`./setup.sh` ажиллуулахад `config/claude-settings.example.json` автоматаар `.claude/settings.json` болж хуулагдана. Гараар хийх бол:
+`setup.ps1` (Windows) эсвэл `./setup.sh` (Mac) ажиллуулахад `config/claude-settings.example.json` автоматаар `.claude/settings.json` болж хуулагдана. Гараар хийх бол:
 
-```bash
-mkdir -p .claude && cp config/claude-settings.example.json .claude/settings.json
+```powershell
+mkdir .claude -Force; copy config\claude-settings.example.json .claude\settings.json
 ```
 
 Энэ тохиргоо дараах зүйлсийг хийнэ:
