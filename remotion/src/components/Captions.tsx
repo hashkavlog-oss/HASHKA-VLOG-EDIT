@@ -21,6 +21,8 @@ type Props = {
   fontSize: number;
   maxWidth: number;
   uppercase: boolean;
+  /** "box" = highlighted word in a colored box, "clean" = white text, active word colored */
+  variant?: "box" | "clean";
 };
 
 export const Captions: React.FC<Props> = ({ src, switchEveryMs, ...style }) => {
@@ -77,6 +79,7 @@ const CaptionPage: React.FC<{ page: TikTokPage } & Omit<Props, "src" | "switchEv
   fontSize,
   maxWidth,
   uppercase,
+  variant = "box",
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -115,6 +118,21 @@ const CaptionPage: React.FC<{ page: TikTokPage } & Omit<Props, "src" | "switchEv
         {page.tokens.map((t, i) => {
           const active = t.fromMs <= nowMs && t.toMs > nowMs;
           const spoken = t.fromMs <= nowMs;
+          if (variant === "clean") {
+            return (
+              <span
+                key={`${t.fromMs}-${i}`}
+                style={{
+                  color: active ? accent : "#fff",
+                  WebkitTextStroke: `${fontSize * 0.07}px rgba(0,0,0,0.85)`,
+                  paintOrder: "stroke fill",
+                  textShadow: `0 ${fontSize * 0.05}px ${fontSize * 0.15}px rgba(0,0,0,0.6)`,
+                }}
+              >
+                {t.text}
+              </span>
+            );
+          }
           return (
             <span
               key={`${t.fromMs}-${i}`}

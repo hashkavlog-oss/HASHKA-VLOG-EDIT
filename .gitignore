@@ -22,3 +22,6 @@ __pycache__/
 .DS_Store
 .env*
 .claude/settings.local.json
+
+# downloaded ML models
+models/

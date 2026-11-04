@@ -1,6 +1,7 @@
 import { CalculateMetadataFunction, Composition } from "remotion";
 import { Edit } from "./Edit";
 import { InfoReel, InfoReelProps } from "./InfoReel";
+import { ProReel, ProReelProps } from "./ProReel";
 import { DEFAULTS, EditProps } from "./types";
 
 const calculateMetadata: CalculateMetadataFunction<EditProps> = ({ props }) => ({
@@ -28,8 +29,32 @@ const infoDemo: InfoReelProps = {
   pops: [{ at: 4, label: "Улс төр", icon: "vote" }],
 };
 
+const proMeta: CalculateMetadataFunction<ProReelProps> = ({ props }) => ({
+  durationInFrames: Math.max(1, Math.round(props.durationInSeconds * DEFAULTS.fps)),
+});
+
+const proDemo: ProReelProps = {
+  ...demo,
+  title: "",
+  logo: "HASHKA'S\nPODCAST",
+  elements: [
+    { type: "gauge", from: 0, to: 4, value: 1, label: "Ганцхан хувь", y: 0.22 },
+    { type: "bigword", from: 4, to: 8, text: "Эрүүл мэнд" },
+  ],
+};
+
 export const RemotionRoot: React.FC = () => (
   <>
+    <Composition
+      id="ProReel"
+      component={ProReel}
+      fps={DEFAULTS.fps}
+      width={1080}
+      height={1920}
+      durationInFrames={240}
+      defaultProps={proDemo}
+      calculateMetadata={proMeta}
+    />
     <Composition
       id="InfoReel"
       component={InfoReel}

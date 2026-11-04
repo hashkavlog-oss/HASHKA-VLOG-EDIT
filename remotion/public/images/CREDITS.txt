@@ -1,1 +1,4 @@
 gov_palace.jpg: File:2024-10-18 Ulaanbaatar, Government Palace.jpg — Alexkom000 — CC BY 4.0 — https://commons.wikimedia.org/wiki/File:2024-10-18_Ulaanbaatar,_Government_Palace.jpg
+covid.png: File:SARS-CoV-2 without background.png — Alissa Eckert, MS; Dan Higgins, MAM — Public domain — https://commons.wikimedia.org/wiki/File:SARS-CoV-2_without_background.png
+naadam.jpg: File:Naadam 2023, Ulan Bator 07.jpg — Bernard Gagnon — CC0 — https://commons.wikimedia.org/wiki/File:Naadam_2023,_Ulan_Bator_07.jpg
+plane.jpg: File:MIAT Mongolian Airlines Boeing 787-9 EI-MGL.jpg — Erdii123 — CC BY-SA 4.0 — https://commons.wikimedia.org/wiki/File:MIAT_Mongolian_Airlines_Boeing_787-9_EI-MGL.jpg

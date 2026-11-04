@@ -172,17 +172,52 @@ def transcribe(src: Path, model_name: str, prompt: str | None) -> list[dict]:
     return _transcribe(audio, model_name, prompt, "cpu")
 
 
+MODEL_ALIASES = {
+    # Mongolian fine-tuned models (much better than stock Whisper for mn)
+    "mn": "models/mn-turbo",            # Tsedee/whisper-large-v3-turbo-mn-2 → CT2 (python scripts/edit.py setup-mn)
+    "mn-small": "sonsyo/sonsyo-whisper-mn-ct2",
+}
+
+
+def resolve_model(name: str) -> str:
+    name = MODEL_ALIASES.get(name, name)
+    if name.startswith("models/"):
+        if not (ROOT / name / "model.bin").exists():
+            print("⚠ models/mn-turbo алга (`setup-mn` ажиллуул). mn-small ашиглаж байна.")
+            return MODEL_ALIASES["mn-small"]
+        return str(ROOT / name)
+    return name
+
+
+def cmd_setup_mn(a):
+    """Download + convert the Mongolian turbo Whisper to CTranslate2 (one time, ~1.6 GB)."""
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "transformers", "torch",
+                    "--extra-index-url", "https://download.pytorch.org/whl/cpu"], check=True)
+    subprocess.run(["ct2-transformers-converter", "--model", "Tsedee/whisper-large-v3-turbo-mn-2",
+                    "--output_dir", str(ROOT / "models" / "mn-turbo"), "--quantization", "int8",
+                    "--copy_files", "tokenizer.json", "preprocessor_config.json", "--force"], check=True)
+    print("✔ models/mn-turbo")
+
+
 def _transcribe(audio, model_name: str, prompt: str | None, device: str) -> list[dict]:
     from faster_whisper import WhisperModel
+    model_name = resolve_model(model_name)
     compute = "float16" if device == "cuda" else "int8"
     print(f"Whisper '{model_name}' ({device}/{compute}) ачаалж байна…", flush=True)
     model = WhisperModel(model_name, device=device, compute_type=compute)
+    # Silero VAD drops real (quiet / overlapping) Mongolian speech, so only use it on long files
+    long_file = len(audio) / 16000 > 600
     segments, info = model.transcribe(
-        audio, language="mn", word_timestamps=True, vad_filter=True,
-        vad_parameters={"min_silence_duration_ms": 400}, beam_size=5,
+        audio, language="mn", word_timestamps=True, vad_filter=long_file,
+        vad_parameters={"min_silence_duration_ms": 1000, "threshold": 0.25}, beam_size=5,
         initial_prompt=prompt, condition_on_previous_text=False)
     caps, t0, next_pct = [], time.time(), 10
     for seg in segments:
+        # hallucination guard: silent/garbage segments
+        if seg.no_speech_prob > 0.6 and seg.avg_logprob < -0.8:
+            continue
+        if seg.avg_logprob < -1.2 or seg.compression_ratio > 2.6:
+            continue
         words = seg.words or []
         for i, w in enumerate(words):
             text = w.word if caps else w.word.lstrip()
@@ -266,12 +301,16 @@ def cmd_clip(a):
 
 # ---------------------------------------------------------------- render
 def remotion_render(video: Path, caps: list[dict], out: Path, comp: str, title: str,
-                    style: dict, extra: dict | None = None) -> None:
+                    style: dict, extra: dict | None = None, assets: dict | None = None) -> None:
     job = f"job_{int(time.time())}_{video.stem}"[:60]
     pub = REMOTION / "public" / "jobs" / job
     pub.mkdir(parents=True, exist_ok=True)
     shutil.copy(video, pub / "video.mp4")
     save_json(pub / "captions.json", caps)
+    extra = dict(extra or {})
+    for key, path in (assets or {}).items():  # extra media (e.g. fg alpha layer)
+        shutil.copy(path, pub / Path(path).name)
+        extra[key] = f"jobs/{job}/{Path(path).name}"
     info = probe(video)
     props = {"video": f"jobs/{job}/video.mp4", "captions": f"jobs/{job}/captions.json",
              "title": title, "durationInSeconds": info["duration"], **style, **(extra or {})}
@@ -378,6 +417,41 @@ def cmd_inforeel(a):
     remotion_render(clip, caps, out, "InfoReel", a.title or "", style_from(a), extra)
 
 
+def cmd_pro(a):
+    """Pro reel (noorog style): face-tracked 9:16, person cut-out layer, timeline graphics."""
+    from reframe import reframe
+    src = Path(a.input)
+    dur = probe(src)["duration"]
+    start = tc(a.start) if a.start else 0.0
+    end = min(tc(a.end), dur) if a.end else dur
+    d = stem_dir(src)
+    tag = f"{src.stem}_pro_{int(start)}_{int(end)}"
+    wd = d / tag
+    wd.mkdir(parents=True, exist_ok=True)
+    clip = wd / "clean.mp4"
+    ffmpeg(["-ss", f"{start:.3f}", "-i", src, "-t", f"{end - start:.3f}", "-af", voice_chain(-14),
+            "-c:v", "libx264", "-crf", "14", "-preset", "fast", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "192k", clip])
+    shots = Path(a.shots) if a.shots else None
+    r = reframe(clip, wd, with_mask=not a.no_mask, shots_file=shots)
+    full = d / "captions.json"
+    if full.exists() and not a.retranscribe:
+        caps = slice_captions(load_json(full), start, end)
+    else:
+        prompt = (ROOT / "config" / "whisper_prompt.txt").read_text(encoding="utf-8").strip()
+        caps = apply_fixes(transcribe(clip, a.model, prompt), load_fixes(ROOT / "config" / "dictionary.txt"))
+    write_caption_files(caps, wd)
+    els = load_json(Path(a.elements)) if a.elements else []
+    for e in els:  # element times are source-video seconds
+        e["from"], e["to"] = round(e["from"] - start, 2), round(e["to"] - start, 2)
+        if "times" in e:
+            e["times"] = [round(t - start, 2) for t in e["times"]]
+    extra = {"elements": [e for e in els if e["to"] > 0], "logo": a.logo}
+    assets = {"fg": r["fg"]} if r["fg"] else {}
+    out = out_path(a.output, src, f"pro_{int(start)}")
+    remotion_render(r["base"], caps, out, "ProReel", a.title or "", style_from(a), extra, assets)
+
+
 def cmd_burn(a):
     """Fast ffmpeg-only subtitle burn (no animation) – good for long episodes."""
     src = Path(a.input)
@@ -443,6 +517,9 @@ def main():
     s = add("fetch", cmd_fetch, "Google Drive / Dropbox / URL-аас input/ руу татах")
     s.add_argument("--name", help="Хадгалах нэр, жишээ ep12.mp4")
 
+    s = sub.add_parser("setup-mn", help="Монгол Whisper turbo модель бэлдэх (нэг удаа)")
+    s.set_defaults(fn=cmd_setup_mn)
+
     add("info", cmd_info, "Видеоны мэдээлэл")
     s = add("frame", cmd_frame, "Кадр зураг гаргах (framing шалгах)")
     s.add_argument("--at", nargs="+", default=["5"])
@@ -461,7 +538,7 @@ def main():
     s.add_argument("--dry-run", action="store_true")
 
     s = add("transcribe", cmd_transcribe, "Монгол транскрипт (Whisper)")
-    s.add_argument("--model", default="large-v3")
+    s.add_argument("--model", default="mn")
     s.add_argument("--prompt")
 
     s = sub.add_parser("srt2json", help="Засварласан SRT → captions.json")
@@ -489,7 +566,7 @@ def main():
     s.add_argument("--tight", action="store_true", help="Завсар/амьсгалыг хасаж хэмнэл чангалах")
     s.add_argument("--no-render", action="store_true", help="Зөвхөн клип+субтитр бэлдэх (засварын дараа render)")
     s.add_argument("-o", "--output")
-    s.add_argument("--model", default="large-v3")
+    s.add_argument("--model", default="mn")
     s.add_argument("--retranscribe", action="store_true")
     layout_args(s)
     style_args(s)
@@ -500,7 +577,19 @@ def main():
     s.add_argument("--cards", help="JSON: [{from,to,icon,kicker,title,points[],stat}] (эх видеоны секунд)")
     s.add_argument("--show", default="Hashka's podcast")
     s.add_argument("--no-pops", action="store_true")
-    s.add_argument("--model", default="large-v3")
+    s.add_argument("--model", default="mn")
+    s.add_argument("--retranscribe", action="store_true")
+    s.add_argument("-o", "--output")
+    style_args(s)
+
+    s = add("pro", cmd_pro, "PRO REEL: нүүр дагах 9:16 + хүний ард график + том үг/хэмжүүр/зураг")
+    s.add_argument("--start")
+    s.add_argument("--end")
+    s.add_argument("--elements", help="JSON timeline (эх видеоны секунд): bigword/counter/gauge/sticker/list")
+    s.add_argument("--logo", default="HASHKA'S\nPODCAST")
+    s.add_argument("--shots", help="Засварласан shots.json (кадр бүрийн тайрах байрлал x)")
+    s.add_argument("--no-mask", action="store_true", help="Хүний ард график хийхгүй (хурдан)")
+    s.add_argument("--model", default="mn")
     s.add_argument("--retranscribe", action="store_true")
     s.add_argument("-o", "--output")
     style_args(s)
@@ -512,7 +601,7 @@ def main():
 
     s = add("podcast", cmd_podcast, "БҮТЭН ДУГААР: дуу→чимээгүй хасах→SRT")
     s.add_argument("-o", "--output")
-    s.add_argument("--model", default="large-v3")
+    s.add_argument("--model", default="mn")
     s.add_argument("--noise", default="-35dB")
     s.add_argument("--min", type=float, default=1.0)
     s.add_argument("--pad", type=float, default=0.25)
