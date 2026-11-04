@@ -10,6 +10,13 @@ User is on Windows 11: use `python` (not `python3`) and give PowerShell commands
 - Remotion project: `remotion/` (comps `Reel` 1080x1920, `Wide` 1920x1080, component `src/Edit.tsx`). Props come from edit.py; don't hand-edit `public/jobs/`.
 - Fonts are local (`remotion/public/fonts`, Montserrat incl. cyrillic-ext for Ө/Ү). Never switch to Google Fonts CDN.
 
+## Cloud sessions (claude.ai/code) — user's main way of working
+- Fresh machine each session: if `remotion/node_modules` is missing, run `./cloud-setup.sh` first.
+- Get video: user shares a Google Drive/Dropbox link → `python3 scripts/edit.py fetch "<link>" --name ep12.mp4` (never ask them to attach video in chat or commit it).
+- Deliver: send finished files from `output/` with SendUserFile (reels mp4, .srt, _youtube.md). Full episodes are huge: send SRT/text unless asked.
+- Machine is reclaimed when idle and media is not in git: finish + deliver in the same session.
+- 4 CPU, no GPU: full-episode large-v3 is slow (~1–2× real time). For reels when the user gives times, transcribe only the clip.
+
 ## Workflow
 1. `podcast input/X.mp4` → clean audio, cut silence, `work/X_episode/transcript.txt` + `.srt`.
 2. Find reel moments: read **transcript.txt only** (compact, timestamped). Pick 30–60 s self-contained moments with a strong hook in the first 3 s. Propose list: start–end, hook title, why.

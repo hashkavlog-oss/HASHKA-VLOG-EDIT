@@ -48,6 +48,35 @@ def out_path(arg: str | None, src: Path, suffix: str) -> Path:
 
 
 # ---------------------------------------------------------------- info / frame
+def cmd_fetch(a):
+    """Download a video into input/ from a Google Drive / Dropbox / direct link (for cloud sessions)."""
+    url = a.input
+    dest_dir = ROOT / "input"
+    dest_dir.mkdir(exist_ok=True)
+    if "drive.google.com" in url or "docs.google.com" in url:
+        import gdown
+        if "/folders/" in url:
+            paths = gdown.download_folder(url, output=str(dest_dir), quiet=True)
+            for f in paths or []:
+                print("✔", f)
+            return
+        out = gdown.download(url, output=str(dest_dir) + "/", quiet=True, fuzzy=True)
+        if not out:
+            raise SystemExit("Татаж чадсангүй. Drive дээр 'Anyone with the link' болгосон эсэхээ шалгаарай.")
+        out = Path(out)
+    else:
+        if "dropbox.com" in url:
+            url = url.replace("dl=0", "dl=1") if "dl=0" in url else url + ("&" if "?" in url else "?") + "dl=1"
+        name = a.name or Path(url.split("?")[0]).name or "video.mp4"
+        out = dest_dir / name
+        subprocess.run(["curl", "-L", "--fail", "-sS", "-o", str(out), url], check=True)
+    if a.name and out.name != a.name:
+        out = out.rename(dest_dir / a.name)
+    info = probe(out)
+    print(f"✔ {out}  ({out.stat().st_size / 1e6:.0f} MB, {info['duration'] / 60:.1f} мин,"
+          f" {info.get('width')}x{info.get('height')})")
+
+
 def cmd_info(a):
     print(json.dumps(probe(Path(a.input)), indent=1))
 
@@ -364,6 +393,9 @@ def main():
         s.add_argument("--wordsPerPageMs", type=int, help="Нэг дэлгэцэнд үг хэр удаан (мс)")
         s.add_argument("--brand", help="Булан дахь лого бичиг, жишээ @hashka")
         s.add_argument("--upper", action="store_true", help="ТОМ ҮСГЭЭР")
+
+    s = add("fetch", cmd_fetch, "Google Drive / Dropbox / URL-аас input/ руу татах")
+    s.add_argument("--name", help="Хадгалах нэр, жишээ ep12.mp4")
 
     add("info", cmd_info, "Видеоны мэдээлэл")
     s = add("frame", cmd_frame, "Кадр зураг гаргах (framing шалгах)")
