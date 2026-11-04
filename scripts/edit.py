@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from captions import (apply_fixes, compact_transcript, load_fixes,  # noqa: E402
+from captions import (apply_fixes, auto_pops, compact_transcript, load_fixes,  # noqa: E402
                       slice_captions, srt_to_captions, words_to_srt)
 from common import (OUTPUT, REMOTION, ROOT, ffmpeg, load_json, probe,  # noqa: E402
                     save_json, stem_dir, tool)
@@ -266,7 +266,7 @@ def cmd_clip(a):
 
 # ---------------------------------------------------------------- render
 def remotion_render(video: Path, caps: list[dict], out: Path, comp: str, title: str,
-                    style: dict) -> None:
+                    style: dict, extra: dict | None = None) -> None:
     job = f"job_{int(time.time())}_{video.stem}"[:60]
     pub = REMOTION / "public" / "jobs" / job
     pub.mkdir(parents=True, exist_ok=True)
@@ -274,7 +274,7 @@ def remotion_render(video: Path, caps: list[dict], out: Path, comp: str, title: 
     save_json(pub / "captions.json", caps)
     info = probe(video)
     props = {"video": f"jobs/{job}/video.mp4", "captions": f"jobs/{job}/captions.json",
-             "title": title, "durationInSeconds": info["duration"], **style}
+             "title": title, "durationInSeconds": info["duration"], **style, **(extra or {})}
     props_file = pub / "props.json"
     save_json(props_file, props)
     if not (REMOTION / "node_modules").exists():
@@ -345,6 +345,37 @@ def cmd_reel(a):
         return
     out = out_path(a.output, src, f"reel_{int(start)}")
     remotion_render(clip, caps, out, "Reel", a.title or "", style_from(a))
+
+
+def cmd_inforeel(a):
+    """16:9 podcast clip framed in a 9:16 designed reel: topic info cards + keyword pictures."""
+    src = Path(a.input)
+    dur = probe(src)["duration"]
+    start = tc(a.start) if a.start else 0.0
+    end = min(tc(a.end), dur) if a.end else dur
+    d = stem_dir(src)
+    tag = f"{src.stem}_info_{int(start)}_{int(end)}"
+    clip = d / f"{tag}.mp4"
+    make_clip(src, clip, start, end, "wide", 0.5, 0.5, True, -14)
+    full = d / "captions.json"
+    if full.exists() and not a.retranscribe:
+        caps = slice_captions(load_json(full), start, end)
+    else:
+        prompt = (ROOT / "config" / "whisper_prompt.txt").read_text(encoding="utf-8").strip()
+        caps = apply_fixes(transcribe(clip, a.model, prompt), load_fixes(ROOT / "config" / "dictionary.txt"))
+    write_caption_files(caps, stem_dir(clip))
+    extra = {"show": a.show}
+    if a.cards:
+        cards = load_json(Path(a.cards))
+        for c in cards:  # card times are given in source-video seconds
+            c["from"], c["to"] = round(c["from"] - start, 2), round(c["to"] - start, 2)
+        extra["cards"] = [c for c in cards if c["to"] > 0]
+    pops = [] if a.no_pops else auto_pops(caps, load_json(ROOT / "config" / "keywords.json"))
+    extra["pops"] = pops
+    print(f"Карт: {len(extra.get('cards', []))}, зураг: {len(pops)} "
+          + ", ".join(f"{p['label']}@{p['at']}s" for p in pops))
+    out = out_path(a.output, src, f"inforeel_{int(start)}")
+    remotion_render(clip, caps, out, "InfoReel", a.title or "", style_from(a), extra)
 
 
 def cmd_burn(a):
@@ -461,6 +492,17 @@ def main():
     s.add_argument("--model", default="large-v3")
     s.add_argument("--retranscribe", action="store_true")
     layout_args(s)
+    style_args(s)
+
+    s = add("inforeel", cmd_inforeel, "16:9 клип + инфо карт + үгэнд гарах зураг (9:16)")
+    s.add_argument("--start")
+    s.add_argument("--end")
+    s.add_argument("--cards", help="JSON: [{from,to,icon,kicker,title,points[],stat}] (эх видеоны секунд)")
+    s.add_argument("--show", default="Hashka's podcast")
+    s.add_argument("--no-pops", action="store_true")
+    s.add_argument("--model", default="large-v3")
+    s.add_argument("--retranscribe", action="store_true")
+    s.add_argument("-o", "--output")
     style_args(s)
 
     s = add("burn", cmd_burn, "Хурдан ffmpeg субтитр шатаах")

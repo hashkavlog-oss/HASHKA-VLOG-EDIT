@@ -122,3 +122,27 @@ def load_fixes(path: Path) -> dict[str, str]:
                 a, b = line.split("=>", 1)
                 fixes[a.strip().lower()] = b.strip()
     return fixes
+
+
+def auto_pops(caps: list[dict], rules: list[dict], min_gap: float = 6.0,
+              dur: float = 2.6) -> list[dict]:
+    """Find spoken keywords (prefix match per word, so suffixes like 'төрийн' match)
+    and return KeywordPop entries. One pop at a time, >= min_gap seconds apart."""
+    words = [re.sub(r"[^\w-]", "", c["text"].lower()) for c in caps]
+    hits = []
+    for rule in rules:
+        for phrase in rule["match"]:
+            pw = phrase.lower().split()
+            for i in range(len(words) - len(pw) + 1):
+                if all(words[i + k].startswith(pw[k]) for k in range(len(pw))):
+                    hits.append((caps[i]["startMs"] / 1000, rule))
+    pops, last, used = [], -1e9, {}
+    for t, rule in sorted(hits, key=lambda h: h[0]):
+        if t - last < min_gap or t - used.get(rule["label"], -1e9) < 20:
+            continue
+        side = "right" if len(pops) % 2 == 0 else "left"
+        pops.append({"at": round(t, 2), "dur": dur, "label": rule["label"], "side": side,
+                     **({"image": rule["image"]} if rule.get("image") else {}),
+                     **({"icon": rule["icon"]} if rule.get("icon") else {})})
+        last, used[rule["label"]] = t, t
+    return pops
