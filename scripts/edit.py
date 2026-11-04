@@ -433,7 +433,11 @@ def cmd_pro(a):
             "-c:v", "libx264", "-crf", "14", "-preset", "fast", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "192k", clip])
     shots = Path(a.shots) if a.shots else None
-    r = reframe(clip, wd, with_mask=not a.no_mask, shots_file=shots)
+    if a.reuse and (wd / "base.mp4").exists():  # only graphics/captions changed: skip slow reframe
+        fg = wd / "fg.webm"
+        r = {"base": wd / "base.mp4", "fg": fg if fg.exists() and not a.no_mask else None}
+    else:
+        r = reframe(clip, wd, with_mask=not a.no_mask, shots_file=shots)
     full = d / "captions.json"
     if full.exists() and not a.retranscribe:
         caps = slice_captions(load_json(full), start, end)
@@ -589,6 +593,7 @@ def main():
     s.add_argument("--logo", default="HASHKA'S\nPODCAST")
     s.add_argument("--shots", help="Засварласан shots.json (кадр бүрийн тайрах байрлал x)")
     s.add_argument("--no-mask", action="store_true", help="Хүний ард график хийхгүй (хурдан)")
+    s.add_argument("--reuse", action="store_true", help="Өмнөх тайралт/mask-ыг дахин ашиглах (зөвхөн график солигдсон үед)")
     s.add_argument("--model", default="mn")
     s.add_argument("--retranscribe", action="store_true")
     s.add_argument("-o", "--output")

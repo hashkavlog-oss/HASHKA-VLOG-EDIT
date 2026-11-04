@@ -58,7 +58,12 @@ export const ProReel: React.FC<ProReelProps> = (p) => {
 
   // hide captions while a big front word/counter is on screen (cleaner, like pro edits)
   const hideCaps = els.some(
-    (el) => (el.type === "bigword" || el.type === "counter") && defaultLayer(el) === "front" && t >= el.from && t < el.to,
+    (el) =>
+      (el.type === "bigword" || el.type === "counter") &&
+      defaultLayer(el) === "front" &&
+      (el.y ?? (el.type === "bigword" ? 0.56 : 0.3)) > 0.4 && // only when it sits where captions are
+      t >= el.from &&
+      t < el.to,
   );
 
   return (

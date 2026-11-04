@@ -25,7 +25,9 @@ const textShadow = "0 6px 0 rgba(0,0,0,0.35), 0 10px 30px rgba(0,0,0,0.55)";
 
 export const BigWord: React.FC<{ el: Extract<ProElement, { type: "bigword" }>; dur: number; a: string }> = ({ el, dur, a }) => {
   const { frame, inP, out } = useInOut(dur);
-  const size = el.size ?? (el.text.length > 14 ? 104 : 132);
+  // auto-fit: the longest word must fit the 1020px width (Montserrat Black ≈ 0.78em per Cyrillic capital)
+  const longest = Math.max(...el.text.replace(/\*/g, "").split(/\s+/).map((w) => w.length));
+  const size = Math.min(el.size ?? 132, Math.floor(1000 / (longest * 0.78)));
   const shake = frame < 8 ? Math.sin(frame * 2.2) * (8 - frame) * 0.8 : 0;
   return (
     <div style={{ position: "absolute", left: 30, right: 30, top: `${(el.y ?? 0.56) * 100}%`, transform: "translateY(-50%)", textAlign: "center" }}>
@@ -201,7 +203,7 @@ export const Sticker: React.FC<{ el: Extract<ProElement, { type: "sticker" }>; d
         </div>
       )}
       {el.label ? (
-        <div style={{ position: "absolute", left: "50%", bottom: -30, transform: "translateX(-50%) rotate(3deg)", background: a, color: "#111", fontFamily, fontWeight: 900, fontSize: 46, padding: "8px 26px", borderRadius: 12, whiteSpace: "nowrap", textTransform: "uppercase" }}>
+        <div style={{ position: "absolute", left: "50%", top: -34, transform: "translateX(-50%) rotate(-3deg)", background: a, color: "#111", fontFamily, fontWeight: 900, fontSize: 46, padding: "8px 26px", borderRadius: 12, whiteSpace: "nowrap", textTransform: "uppercase" }}>
           {el.label}
         </div>
       ) : null}
