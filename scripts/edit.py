@@ -314,20 +314,35 @@ def cmd_render(a):
 
 
 def cmd_reel(a):
-    """Full reel: cut -> reframe 9:16 -> clean audio -> captions -> Remotion render."""
+    """Full reel: cut -> reframe 9:16 -> clean audio -> (tighten) -> captions -> Remotion render.
+    Without --start/--end the whole video is used (e.g. a 1-minute phone recording)."""
     src = Path(a.input)
-    start, end = tc(a.start), tc(a.end)
+    dur = probe(src)["duration"]
+    start = tc(a.start) if a.start else 0.0
+    end = min(tc(a.end), dur) if a.end else dur
+    if end - start > 90:
+        print(f"⚠ Reel {end - start:.0f}s урт байна (Reels/TikTok-д 60s хүртэл хамгийн тохиромжтой).")
     d = stem_dir(src)
-    clip = d / f"reel_{int(start)}_{int(end)}.mp4"
+    tag = f"{src.stem}_reel_{int(start)}_{int(end)}"
+    clip = d / f"{tag}.mp4"
     make_clip(src, clip, start, end, a.layout, a.x, a.x2, True, -14)
+    if a.tight:  # remove pauses -> faster pacing (jump cuts)
+        tight = d / f"{tag}_tight.mp4"
+        cmd_cutsilence(argparse.Namespace(input=str(clip), output=str(tight), noise="-35dB",
+                                          min=0.35, pad=0.08, dry_run=False))
+        clip = tight
     full = d / "captions.json"
-    if full.exists() and not a.retranscribe:
+    if full.exists() and not a.retranscribe and not a.tight:
         print("Бүтэн транскриптээс таслав (дахин танихгүй).")
         caps = slice_captions(load_json(full), start, end)
     else:
         prompt = (ROOT / "config" / "whisper_prompt.txt").read_text(encoding="utf-8").strip()
         caps = apply_fixes(transcribe(clip, a.model, prompt), load_fixes(ROOT / "config" / "dictionary.txt"))
-    save_json(d / f"reel_{int(start)}_{int(end)}.captions.json", caps)
+    cap_dir = stem_dir(clip)  # so `render <clip>` finds them automatically
+    write_caption_files(caps, cap_dir)
+    if a.no_render:
+        print(f"Засах: {cap_dir}/captions.srt → srt2json {cap_dir}/captions.srt → render {clip}")
+        return
     out = out_path(a.output, src, f"reel_{int(start)}")
     remotion_render(clip, caps, out, "Reel", a.title or "", style_from(a))
 
@@ -438,8 +453,10 @@ def main():
     style_args(s)
 
     s = add("reel", cmd_reel, "БҮТЭН REEL: таслах→9:16→дуу→субтитр→render")
-    s.add_argument("--start", required=True)
-    s.add_argument("--end", required=True)
+    s.add_argument("--start", help="Эхлэх цаг (байхгүй бол 0)")
+    s.add_argument("--end", help="Дуусах цаг (байхгүй бол видеоны төгсгөл)")
+    s.add_argument("--tight", action="store_true", help="Завсар/амьсгалыг хасаж хэмнэл чангалах")
+    s.add_argument("--no-render", action="store_true", help="Зөвхөн клип+субтитр бэлдэх (засварын дараа render)")
     s.add_argument("-o", "--output")
     s.add_argument("--model", default="large-v3")
     s.add_argument("--retranscribe", action="store_true")

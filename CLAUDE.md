@@ -19,8 +19,10 @@ User is on Windows 11: use `python` (not `python3`) and give PowerShell commands
 
 ## Workflow
 1. `podcast input/X.mp4` → clean audio, cut silence, `work/X_episode/transcript.txt` + `.srt`.
-2. Find reel moments: read **transcript.txt only** (compact, timestamped). Pick 30–60 s self-contained moments with a strong hook in the first 3 s. Propose list: start–end, hook title, why.
+0. **Main use: ~1-minute reels.** Short phone video (already a reel) → `reel input/X.mp4 --tight --title "..."` (whole video, pauses removed). Keep reels ≤ 60 s.
+2. Find reel moments: read **transcript.txt only** (compact, timestamped). Pick 45–60 s self-contained moments with a strong hook in the first 3 s. Propose list: start–end, hook title, why.
 3. `reel output/X_episode.mp4 --start mm:ss --end mm:ss --title "..." [--layout crop|blur|split --x 0.5]`.
+   Quality path: add `--no-render`, fix the printed captions.srt, `srt2json`, then `render <clip>`.
    Always cut reels from the SAME file the transcript was made from (silence-cut changes timings). Its `work/<stem>/captions.json` is then sliced (no re-transcribe).
 4. Check framing with `frame <video> --at <sec>` (one small image; only when needed).
 
