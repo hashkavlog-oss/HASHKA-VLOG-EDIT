@@ -21,7 +21,9 @@ User is on Windows 11: use `python` (not `python3`) and give PowerShell commands
 `pro input/X.mp4 [--start --end] --elements els.json --title "hook" [--shots shots.json]`
 - Face-tracked 9:16 crop per shot + person cut-out layer (graphics go BEHIND the speaker).
 - Check `work/X/X_pro_*/shots.json`: in wide/split shots set `x` to the **speaking** person (biggest face is not always the speaker), `zoom` 1.3 for wide shots. Verify with 1 small contact-sheet image.
-- Elements (source seconds; sync `from` to the spoken word's time in captions.json): `bigword` (key phrase, front, hides captions), `counter` (numbers), `gauge` (percent), `list` (+`times` per item), `sticker` (image/icon behind speaker, `label`).
+- Elements (source seconds; sync `from` to the spoken word's time in captions.json): `bigword` (key phrase, front, hides captions), `counter` (numbers), `gauge` (percent), `list` (+`times` per item), `sticker` (image/icon behind speaker, `label`), `timeline` (points {label, at, text} appear when spoken).
+- Giant title behind the head: `bigword` with `layer:"back"`, `y:0.17`, `size:190`; `*word*` = accent colour, rest white.
+- Every element starts exactly at the spoken word's `startMs` (look it up in captions.json for that range only).
 - Images: `python3 scripts/images.py "<english query>" --name x` (Wikimedia Commons, free licences, credits in images/CREDITS.txt). Prefer transparent PNG for cut-outs.
 - Rhythm: one visual every 3–6 s, never two big things at once, hook in first 3 s.
 

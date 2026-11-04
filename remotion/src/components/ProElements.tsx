@@ -4,7 +4,8 @@ import { Icon } from "./Icons";
 
 /** Timeline element written by Claude from the transcript (seconds are clip time). */
 export type ProElement =
-  | { type: "bigword"; from: number; to: number; text: string; y?: number; layer?: "front" | "back"; size?: number }
+  | { type: "bigword"; from: number; to: number; /** wrap words in *stars* to colour them accent, rest white */ text: string; y?: number; layer?: "front" | "back"; size?: number }
+  | { type: "timeline"; from: number; to: number; points: { label: string; at: number; text?: string }[]; x?: number; y?: number; layer?: "front" | "back" }
   | { type: "counter"; from: number; to: number; value: number; text?: string; prefix?: string; suffix?: string; y?: number; layer?: "front" | "back" }
   | { type: "gauge"; from: number; to: number; value: number; label?: string; suffix?: string; y?: number; layer?: "front" | "back" }
   | { type: "sticker"; from: number; to: number; image?: string; icon?: string; label?: string; x?: number; y?: number; w?: number; rotate?: number; layer?: "front" | "back" }
@@ -45,8 +46,59 @@ export const BigWord: React.FC<{ el: Extract<ProElement, { type: "bigword" }>; d
           filter: `blur(${interpolate(inP, [0, 0.6], [8, 0], { extrapolateRight: "clamp" })}px)`,
         }}
       >
-        {el.text}
+        {renderTwoTone(el.text, a)}
       </div>
+    </div>
+  );
+};
+
+/** "*alpha* HUMAN" -> alpha in accent, HUMAN white. No stars = all accent. */
+const renderTwoTone = (text: string, a: string) => {
+  if (!text.includes("*")) return text;
+  return text.split(/(\*[^*]+\*)/).map((part, i) =>
+    part.startsWith("*") ? (
+      <span key={i} style={{ color: a }}>{part.slice(1, -1)}</span>
+    ) : (
+      <span key={i} style={{ color: "#fff" }}>{part}</span>
+    ),
+  );
+};
+
+/** Vertical timeline: line grows, each point + label appears when it is spoken. */
+export const Timeline: React.FC<{ el: Extract<ProElement, { type: "timeline" }>; dur: number; a: string }> = ({ el, dur, a }) => {
+  const { frame, fps, inP, out } = useInOut(dur);
+  const x = (el.x ?? 0.68) * 1080;
+  const top = (el.y ?? 0.22) * 1920;
+  const len = 640;
+  const n = el.points.length;
+  return (
+    <div style={{ position: "absolute", inset: 0, opacity: out, fontFamily }}>
+      <div style={{ position: "absolute", left: x - 4, top, width: 8, height: len * inP, background: a, borderRadius: 4, boxShadow: "0 0 20px rgba(0,0,0,.4)" }} />
+      <div style={{ position: "absolute", left: x - 16, top: top - 16, width: 32, height: 32, borderRadius: "50%", background: a, transform: `scale(${inP})` }} />
+      {el.points.map((pt, i) => {
+        const f = Math.round((pt.at - el.from) * fps);
+        const p = spring({ frame: frame - f, fps, config: { damping: 13, stiffness: 180 } });
+        const py = top + (len * (i + 1)) / (n + 0.4);
+        const right = i % 2 === 0;
+        return (
+          <div key={i} style={{ position: "absolute", top: py - 16, left: 0, width: 1080 }}>
+            <div style={{ position: "absolute", left: x - 16, width: 32, height: 32, borderRadius: "50%", background: a, transform: `scale(${p})` }} />
+            <div
+              style={{
+                position: "absolute",
+                top: -46,
+                ...(right ? { left: x + 46 } : { right: 1080 - x + 46 }),
+                textAlign: right ? "left" : "right",
+                opacity: p,
+                transform: `translateX(${interpolate(p, [0, 1], [right ? 40 : -40, 0])}px)`,
+              }}
+            >
+              <div style={{ fontWeight: 900, fontSize: 92, color: "#fff", lineHeight: 1, letterSpacing: -2, textShadow }}>{pt.label}</div>
+              {pt.text ? <div style={{ fontWeight: 800, fontSize: 34, color: a, textShadow, marginTop: 6, maxWidth: 420 }}>{pt.text}</div> : null}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 };

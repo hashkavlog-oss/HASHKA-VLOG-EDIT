@@ -1,7 +1,7 @@
 import { AbsoluteFill, OffthreadVideo, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Captions } from "./components/Captions";
 import { Icon } from "./components/Icons";
-import { BigWord, Counter, Gauge, ListCard, ProElement, Sticker } from "./components/ProElements";
+import { BigWord, Counter, Gauge, ListCard, ProElement, Sticker, Timeline } from "./components/ProElements";
 import { fontFamily } from "./fonts";
 import { DEFAULTS, EditProps } from "./types";
 
@@ -26,10 +26,13 @@ const El: React.FC<{ el: ProElement; dur: number; a: string; b: string }> = ({ e
       return <Sticker el={el} dur={dur} a={a} b={b} />;
     case "list":
       return <ListCard el={el} dur={dur} a={a} />;
+    case "timeline":
+      return <Timeline el={el} dur={dur} a={a} />;
   }
 };
 
-const defaultLayer = (el: ProElement) => el.layer ?? (el.type === "sticker" || el.type === "gauge" ? "back" : "front");
+const defaultLayer = (el: ProElement) =>
+  el.layer ?? (el.type === "sticker" || el.type === "gauge" || el.type === "timeline" ? "back" : "front");
 
 export const ProReel: React.FC<ProReelProps> = (p) => {
   const frame = useCurrentFrame();
