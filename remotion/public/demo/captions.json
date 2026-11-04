@@ -1,0 +1,110 @@
+[
+ {
+  "text": "Сайн",
+  "startMs": 300,
+  "endMs": 689,
+  "timestampMs": 494,
+  "confidence": null
+ },
+ {
+  "text": " байна",
+  "startMs": 689,
+  "endMs": 1156,
+  "timestampMs": 922,
+  "confidence": null
+ },
+ {
+  "text": " уу,",
+  "startMs": 1156,
+  "endMs": 1467,
+  "timestampMs": 1311,
+  "confidence": null
+ },
+ {
+  "text": " өнөөдөр",
+  "startMs": 1467,
+  "endMs": 2089,
+  "timestampMs": 1778,
+  "confidence": null
+ },
+ {
+  "text": " бид",
+  "startMs": 2089,
+  "endMs": 2400,
+  "timestampMs": 2244,
+  "confidence": null,
+  "pageBreakAfter": true
+ },
+ {
+  "text": " сэтгэл",
+  "startMs": 2500,
+  "endMs": 3019,
+  "timestampMs": 2760,
+  "confidence": null
+ },
+ {
+  "text": " түгшилтийн",
+  "startMs": 3019,
+  "endMs": 3835,
+  "timestampMs": 3427,
+  "confidence": null
+ },
+ {
+  "text": " тухай",
+  "startMs": 3835,
+  "endMs": 4281,
+  "timestampMs": 4058,
+  "confidence": null
+ },
+ {
+  "text": " ярина.",
+  "startMs": 4281,
+  "endMs": 4800,
+  "timestampMs": 4540,
+  "confidence": null,
+  "pageBreakAfter": true
+ },
+ {
+  "text": " Үүнийг",
+  "startMs": 5000,
+  "endMs": 5516,
+  "timestampMs": 5258,
+  "confidence": null
+ },
+ {
+  "text": " өөрөө",
+  "startMs": 5516,
+  "endMs": 5958,
+  "timestampMs": 5737,
+  "confidence": null
+ },
+ {
+  "text": " ойлгох",
+  "startMs": 5958,
+  "endMs": 6474,
+  "timestampMs": 6216,
+  "confidence": null
+ },
+ {
+  "text": " нь",
+  "startMs": 6474,
+  "endMs": 6695,
+  "timestampMs": 6584,
+  "confidence": null
+ },
+ {
+  "text": " хамгийн",
+  "startMs": 6695,
+  "endMs": 7284,
+  "timestampMs": 6989,
+  "confidence": null
+ },
+ {
+  "text": " чухал.",
+  "startMs": 7284,
+  "endMs": 7800,
+  "timestampMs": 7542,
+  "confidence": null,
+  "pageBreakAfter": true
+ }
+]

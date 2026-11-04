@@ -1,0 +1,24 @@
+# media (large, never commit)
+input/*
+output/*
+work/*
+!input/.gitkeep
+!output/.gitkeep
+!work/.gitkeep
+*.mp4
+*.mov
+*.wav
+*.m4a
+*.mp3
+
+# deps / build
+node_modules/
+remotion/out/
+remotion/build/
+remotion/public/jobs/
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+.env*
+.claude/settings.local.json
